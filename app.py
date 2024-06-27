@@ -184,13 +184,20 @@ def format_annotation(text):
     citations = []
     text_value = text.value
     for index, annotation in enumerate(text.annotations):
-        text_value = text.value.replace(annotation.text, f" [{index}]")
+        text_value = text_value.replace(annotation.text, f" [{index}]")
 
         if file_citation := getattr(annotation, "file_citation", None):
-            cited_file = client.files.retrieve(file_citation.file_id)
-            citations.append(
-                f"[{index}] {file_citation.quote} from {cited_file.filename}"
-            )
+            try:
+                cited_file = client.files.retrieve(file_citation.file_id)
+                citation_text = f"[{index}] from {cited_file.filename}"
+                # Attempt to add quote if it exists
+                if hasattr(file_citation, "quote"):
+                    citation_text = f"[{index}] {file_citation.quote} from {cited_file.filename}"
+                citations.append(citation_text)
+            except AttributeError as e:
+                st.write(f"Error: {e}")
+                st.write(f"FileCitation attributes: {dir(file_citation)}")
+                citations.append(f"[{index}] from {cited_file.filename}")
         elif file_path := getattr(annotation, "file_path", None):
             link_tag = create_file_link(
                 annotation.text.split("/")[-1],
